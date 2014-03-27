@@ -121,6 +121,14 @@ endif
 LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
 
 LOCAL_CFLAGS += -DUSE_EXT4 -DMINIVOLD
+
+# Handling for EV_REL is disabled by default because some accelerometers
+# send EV_REL events.  Actual EV_REL devices are rare on modern hardware
+# so it's cleaner just to disable it by default.
+ifneq ($(BOARD_RECOVERY_NEEDS_REL_INPUT),)
+    LOCAL_CFLAGS += -DBOARD_RECOVERY_NEEDS_REL_INPUT
+endif
+
 LOCAL_C_INCLUDES += system/extras/ext4_utils system/core/fs_mgr/include external/fsck_msdos
 LOCAL_C_INCLUDES += system/vold
 
