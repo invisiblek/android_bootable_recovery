@@ -69,6 +69,7 @@ LOCAL_C_INCLUDES += \
     system/vold \
     system/extras/ext4_utils \
     system/core/adb \
+    external/e2fsprogs/lib
 
 LOCAL_STATIC_LIBRARIES := \
     libbatterymonitor \
@@ -225,7 +226,9 @@ LOCAL_STATIC_LIBRARIES += \
     libcutils \
     liblog \
     libm \
-    libc
+    libc \
+    libext2_blkid \
+    libext2_uuid
 
 LOCAL_C_INCLUDES +=         	\
     system/core/fs_mgr/include	\
@@ -236,7 +239,8 @@ LOCAL_C_INCLUDES +=         	\
     external/libtar/listhash    \
     external/openssl/include    \
     external/zlib               \
-    bionic/libc/bionic
+    bionic/libc/bionic          \
+    external/e2fsprogs/lib
 
 
 include $(BUILD_EXECUTABLE)
