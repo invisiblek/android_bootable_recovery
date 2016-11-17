@@ -45,15 +45,20 @@ static struct fstab* read_fstab(std::string* err) {
   return fstab;
 }
 
-static std::string get_misc_blk_device(std::string* err) {
+static std::string get_update_blk_device(std::string* err) {
   struct fstab* fstab = read_fstab(err);
   if (fstab == nullptr) {
     return "";
   }
-  fstab_rec* record = fs_mgr_get_entry_for_mount_point(fstab, "/misc");
+  std::string mount_point = "/misc";
+  fstab_rec* record = fs_mgr_get_entry_for_mount_point(fstab, mount_point.c_str());
   if (record == nullptr) {
-    *err = "failed to find /misc partition";
-    return "";
+    mount_point = "/cache";
+    record = fs_mgr_get_entry_for_mount_point(fstab, mount_point.c_str());
+    if (record == nullptr) {
+      *err = "failed to find /misc or /cache partition";
+      return "";
+    }
   }
   return record->blk_device;
 }
@@ -82,26 +87,26 @@ static bool wait_for_device(const std::string& blk_device, std::string* err) {
 }
 
 static bool read_misc_partition(void* p, size_t size, size_t offset, std::string* err) {
-  std::string misc_blk_device = get_misc_blk_device(err);
-  if (misc_blk_device.empty()) {
+  std::string update_blk_device = get_update_blk_device(err);
+  if (update_blk_device.empty()) {
     return false;
   }
-  if (!wait_for_device(misc_blk_device, err)) {
+  if (!wait_for_device(update_blk_device, err)) {
     return false;
   }
-  android::base::unique_fd fd(open(misc_blk_device.c_str(), O_RDONLY));
+  android::base::unique_fd fd(open(update_blk_device.c_str(), O_RDONLY));
   if (fd.get() == -1) {
-    *err = android::base::StringPrintf("failed to open %s: %s", misc_blk_device.c_str(),
+    *err = android::base::StringPrintf("failed to open %s: %s", update_blk_device.c_str(),
                                        strerror(errno));
     return false;
   }
   if (lseek(fd.get(), static_cast<off_t>(offset), SEEK_SET) != static_cast<off_t>(offset)) {
-    *err = android::base::StringPrintf("failed to lseek %s: %s", misc_blk_device.c_str(),
+    *err = android::base::StringPrintf("failed to lseek %s: %s", update_blk_device.c_str(),
                                        strerror(errno));
     return false;
   }
   if (!android::base::ReadFully(fd.get(), p, size)) {
-    *err = android::base::StringPrintf("failed to read %s: %s", misc_blk_device.c_str(),
+    *err = android::base::StringPrintf("failed to read %s: %s", update_blk_device.c_str(),
                                        strerror(errno));
     return false;
   }
@@ -109,30 +114,30 @@ static bool read_misc_partition(void* p, size_t size, size_t offset, std::string
 }
 
 static bool write_misc_partition(const void* p, size_t size, size_t offset, std::string* err) {
-  std::string misc_blk_device = get_misc_blk_device(err);
-  if (misc_blk_device.empty()) {
+  std::string update_blk_device = get_update_blk_device(err);
+  if (update_blk_device.empty()) {
     return false;
   }
-  android::base::unique_fd fd(open(misc_blk_device.c_str(), O_WRONLY | O_SYNC));
+  android::base::unique_fd fd(open(update_blk_device.c_str(), O_WRONLY | O_SYNC));
   if (fd.get() == -1) {
-    *err = android::base::StringPrintf("failed to open %s: %s", misc_blk_device.c_str(),
+    *err = android::base::StringPrintf("failed to open %s: %s", update_blk_device.c_str(),
                                        strerror(errno));
     return false;
   }
   if (lseek(fd.get(), static_cast<off_t>(offset), SEEK_SET) != static_cast<off_t>(offset)) {
-    *err = android::base::StringPrintf("failed to lseek %s: %s", misc_blk_device.c_str(),
+    *err = android::base::StringPrintf("failed to lseek %s: %s", update_blk_device.c_str(),
                                        strerror(errno));
     return false;
   }
   if (!android::base::WriteFully(fd.get(), p, size)) {
-    *err = android::base::StringPrintf("failed to write %s: %s", misc_blk_device.c_str(),
+    *err = android::base::StringPrintf("failed to write %s: %s", update_blk_device.c_str(),
                                        strerror(errno));
     return false;
   }
 
   // TODO: O_SYNC and fsync duplicates each other?
   if (fsync(fd.get()) == -1) {
-    *err = android::base::StringPrintf("failed to fsync %s: %s", misc_blk_device.c_str(),
+    *err = android::base::StringPrintf("failed to fsync %s: %s", update_blk_device.c_str(),
                                        strerror(errno));
     return false;
   }
