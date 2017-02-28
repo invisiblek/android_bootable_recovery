@@ -130,6 +130,10 @@ ifneq ($(BOARD_RECOVERY_NEEDS_REL_INPUT),)
     LOCAL_CFLAGS += -DBOARD_RECOVERY_NEEDS_REL_INPUT
 endif
 
+ifeq ($(BOARD_HAS_DOWNLOAD_MODE), true)
+    LOCAL_CFLAGS += -DDOWNLOAD_MODE
+endif
+
 LOCAL_C_INCLUDES += system/extras/ext4_utils system/core/fs_mgr/include external/fsck_msdos
 LOCAL_C_INCLUDES += system/vold
 
